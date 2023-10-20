@@ -1,5 +1,7 @@
 # AxiosInterceptor 와 ReactQuery 의 병합 사용을 목적 테스팅 코드입니다.
 
+## 전체 코드는 따로 올려두었습니다.
+
 ## 이슈 사항
 
 우선적으로 문제가 되었던 부분은 REST API가 3개여서 공통적인 부분으로 Axios Request Intercepter가 필요한 상황이었습니다.
@@ -120,5 +122,54 @@ const apiConfigSetting: (
         : (config.data = param);
 
     return instance(config);
+}
+```
+
+이렇게 만들고 나면 ApiConfig 생성을 담당하는 클래스를 생성했습니다.
+
+```ts
+/**
+ * API 요청시 보낼 객체를 생성하는 클래스
+ */
+export class ApiConfig {
+    public url: string;
+    public param: paramInterface | null;
+    public multipartUse: boolean;
+
+    private constructor(
+        url: string,
+        param: paramInterface | null,
+        multipartUse: boolean
+    ) {
+        this.param = param;
+        this.url = url;
+        this.multipartUse = multipartUse;
+    }
+
+    static Builder = class {
+        private _url = '';
+        private _param = null;
+        private _multipartUse = false;
+
+        setUrl(value: string) {
+            this._url = value;
+            return this;
+        }
+
+        setParam(value: any) {
+            this._param = value;
+            return this;
+        }
+
+        setMultipartUse(value: boolean) {
+            this._multipartUse = value;
+            return this;
+        }
+
+        build() {
+            return Object.freeze(new ApiConfig(this._url, this._param, this._multipartUse));
+        }
+
+    };
 }
 ```
