@@ -1,6 +1,5 @@
 import axios, {AxiosInstance, AxiosResponse} from "axios";
 
-
 export const restAPI1AxiosInstance: AxiosInstance = axios.create({
     baseURL: process.env.REACT_APP_restAPI1_URL,
     timeout: 1000 * 10
