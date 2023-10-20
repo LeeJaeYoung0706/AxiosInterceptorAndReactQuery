@@ -173,3 +173,52 @@ export class ApiConfig {
     };
 }
 ```
+
+
+#### 2 React Query
+
+```ts
+type testType = boolean | undefined;
+
+const useSelectQuery = (queryKey: QueryKey, callBack: () => Promise<AxiosResponse<any, any>>, enabled?: testType) => {
+    const dispatch: Dispatch<AnyAction> = useAppDispatch(); // redux alert 상태 값
+    const { t } = useTranslation<"error", undefined>(); // 국제화
+    return useQuery(queryKey, callBack, {
+        onError: (error?: unknown) => onErrorFun(error, dispatch, t), // error 발생 할 경우 타는 function
+        select: (data: any) => data?.data?.response, // data result 변환처리
+        retry: false, // 실패시 재 요청 횟수
+        enabled: enabled !== undefined ? enabled : true // 원할 때 활성화 시키기 위한 Boolean 값 
+    });
+};
+```
+
+이런 식으로 생성해서 error를 핸들링 할 수 있도록 하고
+
+
+```ts
+const excludeStatus = [0];
+/**
+ * HTTP status 가 200 이 아닐 경우 error 처리 하기 위한 Function
+ * @param error
+ * @param dispatch
+ * @param t
+ */
+export const onErrorFun = (error: any, dispatch: Dispatch<AnyAction>, t: TFunction<"error", undefined, "error">) => {
+    let status = error.request.status;
+    if (excludeStatus.includes(status)) status = 500;
+
+    const title = `error:${status}:title` as string; // 국제화 파일 변수 이름
+    const message = `error:${status}:message` as string; // 국제화 파일 변수 이름
+
+    dispatch(
+        alertOpen({
+            title: t(title),
+            items: 1,
+            message: t(message),
+            text1: "확인"
+        })
+    );
+};
+```
+
+이런 식으로 onErrorFun 을 생성해서 Axios와 ReactQuery를 병합해서 사용할 수 있도록 설계했습니다.
