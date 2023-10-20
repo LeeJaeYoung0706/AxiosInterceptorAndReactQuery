@@ -10,9 +10,6 @@
 
 #### 1번 AxiosInstance 만들기
 ```ts
-import axios, {AxiosInstance, AxiosResponse} from "axios";
-
-
 export const restAPI1AxiosInstance: AxiosInstance = axios.create({
     baseURL: process.env.REACT_APP_restAPI1_URL,
     timeout: 1000 * 10
@@ -27,33 +24,11 @@ export const restAPI3AxiosInstance: AxiosInstance = axios.create({
     baseURL: process.env.REACT_APP_restAPI3_URL,
     timeout: 1000 * 10
 })
+```
+우선 MSA 구조의 특성 상 기능별로 REST API를 나누어 설계하기 때문에 REST API가 3개라고 가정한다면 이런 식으로 서로 다른 baseURL을 가지도록 했습니다. 여기서 저는 고민을 했는데 예를 들면
+instance를 생성하는 메소드를 호출하는 과정을 거치는 함수를 만들어서 Axios 호출 메소드에 매개변수 형식으로 넣을까 했습니다. 
 
-
-const apiConfigSetting: (
-    method: string,
-    APIConfig: APIProps,
-    instance: AxiosInstance
-) => Promise<AxiosResponse<any>> = (method: string, APIConfig: APIProps , instance: AxiosInstance) => {
-    const { url, param, multipartUse } = APIConfig;
-    const config: any = {
-        url: url, // + '?lang=' + nowLanguage()
-        method: method,
-    };
-
-    multipartUse
-        ? (config.headers = {
-            'Content-Type': 'multipart/form-data; charset=utf-8',
-        })
-        : (config.headers = {
-            'Content-Type': 'application/json; charset=utf-8',
-        });
-    method === 'get' || method === 'delete'
-        ? (config.params = param)
-        : (config.data = param);
-
-    return instance(config);
-}
-
+```ts
 export const apiRequest = {
     restAPI1: {
         get: (APIConfig: APIProps) => {
@@ -94,7 +69,56 @@ export const apiRequest = {
 
 };
 ```
+이러한 호출을 담당하는 메소드가 있을 때 그런 형식으로 변경한다면 
 
-이러한 형식으로 만들었습니다. 예를 들면 REST API가 1, 2, 3이 있을 때 호출해야하는 상황이 서로 다르기 때문에 export Method를 만들어서 간편하게 호출할 수 있도록 instance를 모듈화하였습니다.
-또한 FormData형식과 get형식의 Request 요청을 분할하여 Header를 동적으로 사용해야하는 상황이었기에 매개 변수로 사용할 수 있도록 설계하였습니다.
 
+```ts
+export const apiRequest = {
+    get: {
+        restAPI1: (APIConfig: APIProps) => {
+            return apiConfigSetting('get', 'restAPI1', APIConfig , resourceUserAxiosInstance );
+        },
+        restAPI2: (APIConfig: APIProps) => {
+            return apiConfigSetting('get', 'restAPI2', APIConfig , resourceUserAxiosInstance);
+        },
+        restAPI3: (APIConfig: APIProps) => {
+            return apiConfigSetting('get', 'restAPI3', APIConfig , resourceUserAxiosInstance);
+        },
+    },
+     ... get , post , patch , delete 구현해야함
+};
+
+```
+이런 식으로 매개 변수를 추가해야하고 따로 추상화된 메소드 내에 env형식을 삼항연산자로 표시해야한다는 것 때문에 기능적으로 하나만 존재하면 되는 메소드를 고민하다가 3개로 나누었습니다.
+```ts
+stringAPI === 'restAPI1' ? process.env.restAPI1 : stringAPI === 'restAPI2' ? process.env.restAPI2
+```
+이런 형식으로 말이죠 그래서 어느 방향이 솔직히 나을지 몰라서 저는 그냥 한 개씩 구현하는 방향으로 선택하게 되었습니다.
+
+아래는 이에 따른 instanceConfigSetting 입니다.
+```ts
+const apiConfigSetting: (
+    method: string,
+    APIConfig: APIProps,
+    instance: AxiosInstance
+) => Promise<AxiosResponse<any>> = (method: string, APIConfig: APIProps , instance: AxiosInstance) => {
+    const { url, param, multipartUse } = APIConfig;
+    const config: any = {
+        url: url, // + '?lang=' + nowLanguage()
+        method: method,
+    };
+
+    multipartUse
+        ? (config.headers = {
+            'Content-Type': 'multipart/form-data; charset=utf-8',
+        })
+        : (config.headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+        });
+    method === 'get' || method === 'delete'
+        ? (config.params = param)
+        : (config.data = param);
+
+    return instance(config);
+}
+```
