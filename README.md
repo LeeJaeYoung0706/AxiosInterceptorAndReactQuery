@@ -175,7 +175,7 @@ export class ApiConfig {
 ```
 
 
-#### 2 React Query
+#### 2번 React Query
 
 ```ts
 type testType = boolean | undefined;
